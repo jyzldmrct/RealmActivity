@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -34,7 +36,6 @@ import kotlinx.coroutines.launch
 import ph.edu.auf.realmdiscussion.components.ItemPet
 import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 
-
 @Composable
 fun PetScreen(petViewModel: PetViewModel = viewModel()){
 
@@ -43,6 +44,8 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()){
     val coroutineScope = rememberCoroutineScope()
 
     var snackbarShown by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredPets = pets.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
     LaunchedEffect(petViewModel.showSnackbar)
     {
@@ -74,20 +77,25 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()){
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState)}
         ) { paddingValues ->
-            LazyColumn(modifier = Modifier.padding(paddingValues)) {
-                itemsIndexed(
-                    items = pets,
-                    key = {_,item -> item.id}
-                ){_, petContent->
-                    ItemPet(petContent, onRemove = petViewModel::deletePet)
+            Column(modifier = Modifier.padding(paddingValues)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Search Pets") },
+                    modifier = Modifier.fillMaxWidth().padding(16.dp)
+                )
+                LazyColumn {
+                    itemsIndexed(
+                        items = filteredPets,
+                        key = {_,item -> item.id}
+                    ){_, petContent->
+                        ItemPet(petContent, onRemove = petViewModel::deletePet)
+                    }
                 }
             }
         }
-
     }
-
 }
-
 @Preview(showBackground = true)
 @Composable
 fun PetScreenPreview(){
