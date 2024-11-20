@@ -174,6 +174,13 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                         text = petModel.petType,
                         style = MaterialTheme.typography.labelSmall
                     )
+                    if (petModel.ownerName.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Owner: ${petModel.ownerName}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = { showAdoptDialog = true }) {
                         Text("Adopt")
