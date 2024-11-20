@@ -1,9 +1,7 @@
 package ph.edu.auf.realmdiscussion.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.realm.kotlin.query.RealmQuery
 import io.realm.kotlin.query.RealmResults
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -12,13 +10,27 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import ph.edu.auf.realmdiscussion.database.RealmHelper
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
 import java.util.UUID
+import ph.edu.auf.realmdiscussion.R
 
 class PetViewModel : ViewModel() {
+
+    val petTypeToImageRes: Map<String, Int> = mapOf(
+        "Dog" to R.drawable.dog,
+        "Cat" to R.drawable.cat,
+        "Duck" to R.drawable.bird,
+        "Pig" to R.drawable.pig,
+        "Bird" to R.drawable.bird,
+        "Fish" to R.drawable.fish,
+        "Hamster" to R.drawable.hamster,
+        "Rabbit" to R.drawable.rabbit,
+        "Guinea Pig" to R.drawable.guinea_pig,
+        "Turtle" to R.drawable.turtle,
+        "Snake" to R.drawable.snake
+    )
 
     private val _pets = MutableStateFlow<List<PetModel>>(emptyList())
     val pets: StateFlow<List<PetModel>> get() = _pets.asStateFlow()
@@ -150,17 +162,10 @@ class PetViewModel : ViewModel() {
                     existingPet.ownerName = ownerName
                 }
             }
-            // Reload pets to ensure UI reflects changes
             loadPets()
             viewModelScope.launch {
                 _showSnackbar.emit("$ownerName adopted ${pet.name} ")
             }
         }
     }
-
-
-
-
-
-
 }

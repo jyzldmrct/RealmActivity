@@ -1,14 +1,20 @@
 package ph.edu.auf.realmdiscussion.components
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import ph.edu.auf.realmdiscussion.R
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 
@@ -28,22 +34,18 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
         confirmValueChange = {
             when (it) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    // Deletion part
                     onRemove(currentItem)
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    // Show update dialog
                     showDialog = true
                     return@rememberSwipeToDismissBoxState false
                 }
                 SwipeToDismissBoxValue.Settled -> {
-                    // Nothing
                     return@rememberSwipeToDismissBoxState false
                 }
             }
             return@rememberSwipeToDismissBoxState true
         },
-        // 25% of the width of the card/box
         positionalThreshold = { it * .25f }
     )
 
@@ -78,16 +80,14 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                     onClick = {
                         val age = newAge.toIntOrNull()
                         if (age != null) {
-                            // Pass a copy of the current item's properties
                             petViewModel.updatePet(
-                                pet = currentItem,  // Ensure this is the most recent version
+                                pet = currentItem,
                                 newName = newName,
                                 newAge = age,
                                 newPetType = newPetType
                             )
                             showDialog = false
                         } else {
-                            // Handle invalid age input
                             Log.e("PetUpdate", "Invalid age input")
                         }
                     }
@@ -150,6 +150,16 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                 shape = RoundedCornerShape(5.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    val imageResId = petViewModel.petTypeToImageRes[petModel.petType] ?: R.drawable.default_image
+                    val painter: Painter = painterResource(id = imageResId)
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(200.dp)
+                            .clip(CircleShape)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = petModel.name,
                         style = MaterialTheme.typography.headlineSmall

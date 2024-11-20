@@ -35,19 +35,11 @@ import kotlinx.coroutines.launch
 import ph.edu.auf.realmdiscussion.components.ItemPet
 import androidx.compose.material3.Checkbox
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.remember
 import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,20 +63,19 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
     val petTypes = listOf(
         "Dog",
         "Cat",
+        "Duck",
+        "Pig",
         "Bird",
         "Fish",
         "Hamster",
         "Rabbit",
         "Guinea Pig",
         "Turtle",
-        "Ferret",
-        "Lizard",
-        "Snake",
-        "Parrot"
+        "Snake"
     )
 
     var newOwnerName by remember { mutableStateOf("") }
-
+    var newImageUrl by remember { mutableStateOf("") }
 
     LaunchedEffect(petViewModel.showSnackbar) {
         petViewModel.showSnackbar.collect { message: String ->
@@ -147,6 +138,15 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                         value = newPetName,
                         onValueChange = { newPetName = it },
                         label = { Text("Pet Name") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = newImageUrl,
+                        onValueChange = { newImageUrl = it },
+                        label = { Text("Image URL") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
@@ -231,6 +231,7 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                             selectedPetType = ""
                             hasOwner = false
                             newOwnerName = ""
+                            newImageUrl = ""
                         }
                     }
                 ) {
@@ -247,6 +248,7 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                         selectedPetType = ""
                         hasOwner = false
                         newOwnerName = ""
+                        newImageUrl = ""
                     }
                 ) {
                     Text("Cancel")
