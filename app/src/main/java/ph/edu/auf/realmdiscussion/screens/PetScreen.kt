@@ -75,7 +75,6 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
     )
 
     var newOwnerName by remember { mutableStateOf("") }
-    var newImageUrl by remember { mutableStateOf("") }
 
     LaunchedEffect(petViewModel.showSnackbar) {
         petViewModel.showSnackbar.collect { message: String ->
@@ -138,15 +137,6 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                         value = newPetName,
                         onValueChange = { newPetName = it },
                         label = { Text("Pet Name") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = newImageUrl,
-                        onValueChange = { newImageUrl = it },
-                        label = { Text("Image URL") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
@@ -231,7 +221,6 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                             selectedPetType = ""
                             hasOwner = false
                             newOwnerName = ""
-                            newImageUrl = ""
                         }
                     }
                 ) {
@@ -248,7 +237,6 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                         selectedPetType = ""
                         hasOwner = false
                         newOwnerName = ""
-                        newImageUrl = ""
                     }
                 ) {
                     Text("Cancel")

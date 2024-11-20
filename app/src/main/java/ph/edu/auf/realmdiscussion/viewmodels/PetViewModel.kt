@@ -21,7 +21,7 @@ class PetViewModel : ViewModel() {
     val petTypeToImageRes: Map<String, Int> = mapOf(
         "Dog" to R.drawable.dog,
         "Cat" to R.drawable.cat,
-        "Duck" to R.drawable.bird,
+        "Duck" to R.drawable.duck,
         "Pig" to R.drawable.pig,
         "Bird" to R.drawable.bird,
         "Fish" to R.drawable.fish,
