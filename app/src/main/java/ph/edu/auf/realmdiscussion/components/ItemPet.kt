@@ -9,8 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 
@@ -23,6 +21,8 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
     var newAge by remember { mutableStateOf(petModel.age.toString()) }
     var newPetType by remember { mutableStateOf(petModel.petType) }
     var showDialog by remember { mutableStateOf(false) }
+    var showAdoptDialog by remember { mutableStateOf(false) }
+    var ownerName by remember { mutableStateOf("") }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -103,6 +103,39 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
         )
     }
 
+    if (showAdoptDialog) {
+        AlertDialog(
+            onDismissRequest = { showAdoptDialog = false },
+            title = { Text("Adopt Pet") },
+            text = {
+                Column {
+                    TextField(
+                        value = ownerName,
+                        onValueChange = { ownerName = it },
+                        label = { Text("Owner Name") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (ownerName.isNotBlank()) {
+                            petViewModel.adoptPet(currentItem, ownerName)
+                            showAdoptDialog = false
+                        }
+                    }
+                ) {
+                    Text("Adopt")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAdoptDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = { DismissBackground(dismissState) },
@@ -131,6 +164,10 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                         text = petModel.petType,
                         style = MaterialTheme.typography.labelSmall
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { showAdoptDialog = true }) {
+                        Text("Adopt")
+                    }
                 }
             }
         }

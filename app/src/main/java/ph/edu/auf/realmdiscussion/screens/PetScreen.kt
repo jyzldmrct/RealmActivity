@@ -137,7 +137,6 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
         }
     }
 
-
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
