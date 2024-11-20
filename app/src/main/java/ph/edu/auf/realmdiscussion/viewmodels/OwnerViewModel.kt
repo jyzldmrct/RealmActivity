@@ -11,14 +11,14 @@ import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
 
 class OwnerViewModel : ViewModel() {
     private val _owners = MutableStateFlow<List<OwnerModel>>(emptyList())
-    val owners : StateFlow<List<OwnerModel>> get() = _owners
+    val owners: StateFlow<List<OwnerModel>> get() = _owners
 
     init {
         loadOwners()
     }
 
     private fun loadOwners() {
-        viewModelScope.launch(Dispatchers.IO){
+        viewModelScope.launch(Dispatchers.IO) {
             val realm = RealmHelper.getRealmInstance()
             val results = realm.query(OwnerModel::class).find()
             _owners.value = results
