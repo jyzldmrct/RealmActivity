@@ -1,11 +1,16 @@
 package ph.edu.auf.realmdiscussion.components
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 
@@ -14,6 +19,10 @@ import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel) -> Unit) {
 
     val currentItem by rememberUpdatedState(petModel)
+    var newName by remember { mutableStateOf(petModel.name) }
+    var newAge by remember { mutableStateOf(petModel.age.toString()) }
+    var newPetType by remember { mutableStateOf(petModel.petType) }
+    var showDialog by remember { mutableStateOf(false) }
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -23,8 +32,8 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                     onRemove(currentItem)
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    // Add pet owner
-                    petViewModel.addOwner(petModel)
+                    // Show update dialog
+                    showDialog = true
                     return@rememberSwipeToDismissBoxState false
                 }
                 SwipeToDismissBoxValue.Settled -> {
@@ -37,6 +46,62 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
         // 25% of the width of the card/box
         positionalThreshold = { it * .25f }
     )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("Update Pet") },
+            text = {
+                Column {
+                    TextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Pet Name") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = newAge,
+                        onValueChange = { newAge = it },
+                        label = { Text("Pet Age") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = newPetType,
+                        onValueChange = { newPetType = it },
+                        label = { Text("Pet Type") }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val age = newAge.toIntOrNull()
+                        if (age != null) {
+                            // Pass a copy of the current item's properties
+                            petViewModel.updatePet(
+                                pet = currentItem,  // Ensure this is the most recent version
+                                newName = newName,
+                                newAge = age,
+                                newPetType = newPetType
+                            )
+                            showDialog = false
+                        } else {
+                            // Handle invalid age input
+                            Log.e("PetUpdate", "Invalid age input")
+                        }
+                    }
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     SwipeToDismissBox(
         state = dismissState,

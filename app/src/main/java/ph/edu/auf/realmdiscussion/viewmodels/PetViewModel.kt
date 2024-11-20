@@ -1,5 +1,6 @@
 package ph.edu.auf.realmdiscussion.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.realm.kotlin.query.RealmQuery
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ph.edu.auf.realmdiscussion.database.RealmHelper
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
@@ -104,4 +106,49 @@ fun addPet(name: String, age: Int, hasOwner: Boolean, petType: String, ownerName
             }
         }
     }
+
+    fun updatePet(pet: PetModel, newName: String, newAge: Int, newPetType: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val realm = RealmHelper.getRealmInstance()
+            try {
+                var existingPet: PetModel? = null
+                realm.write {
+                    // Query for the existing pet by its ID
+                    existingPet = query(PetModel::class, "id == $0", pet.id).first().find()
+
+                    if (existingPet != null) {
+                        // Update pet details
+                        existingPet!!.name = newName
+                        existingPet!!.age = newAge
+                        existingPet!!.petType = newPetType
+                    }
+                }
+
+                // Trigger UI update after write transaction completes
+                launch(Dispatchers.Main) {
+                    // Reload pets to ensure UI reflects changes
+                    loadPets()
+
+                    _showSnackbar.emit(
+                        if (existingPet != null)
+                            "Updated $newName"
+                        else
+                            "Pet not found"
+                    )
+                }
+
+            } catch (e: Exception) {
+                launch(Dispatchers.Main) {
+                    _showSnackbar.emit("Error updating pet: ${e.message}")
+                }
+            }
+            // No need to manually close realm
+        }
+    }
+
+
+
+
+
+
 }
