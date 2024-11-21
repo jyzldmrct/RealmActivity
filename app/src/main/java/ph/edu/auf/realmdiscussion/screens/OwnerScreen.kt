@@ -58,7 +58,7 @@ fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
                             OwnerItem(owner = ownerContent, ownerViewModel = ownerViewModel)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Owns ${ownerContent.pets.size} pets",
+                                text = "Owns ${ownerContent.totalPets} pets",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

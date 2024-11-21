@@ -13,4 +13,5 @@ class OwnerModel : RealmObject {
     var petId: String = ""
     var pets: RealmList<PetModel> = realmListOf()
     var totalPets: Int = 0
+    var adoptedPetsCount: Int = 0
 }
