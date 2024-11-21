@@ -29,6 +29,38 @@ class OwnerViewModel : ViewModel() {
         }
     }
 
+
+    fun updateOwnerName(ownerId: String, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val realm = RealmHelper.getRealmInstance()
+            try {
+                var existingOwner: OwnerModel? = null
+                realm.write {
+                    existingOwner = query(OwnerModel::class, "id == $0", ownerId).first().find()
+
+                    if (existingOwner != null) {
+                        existingOwner!!.name = newName
+                        copyToRealm(existingOwner!!)
+                    }
+                }
+
+                launch(Dispatchers.Main) {
+                    _showSnackbar.emit(
+                        if (existingOwner != null)
+                            "Updated owner name to $newName"
+                        else
+                            "Owner not found"
+                    )
+                }
+
+            } catch (e: Exception) {
+                launch(Dispatchers.Main) {
+                    _showSnackbar.emit("Error updating owner name: ${e.message}")
+                }
+            }
+        }
+    }
+
    fun deleteOwner(owner: OwnerModel) {
     viewModelScope.launch(Dispatchers.IO) {
         val realm = RealmHelper.getRealmInstance()
@@ -49,5 +81,10 @@ class OwnerViewModel : ViewModel() {
             }
         }
     }
+
+
+
+
+
 }
 }

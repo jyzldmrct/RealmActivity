@@ -31,8 +31,8 @@ import ph.edu.auf.realmdiscussion.viewmodels.OwnerViewModel
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
 fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
@@ -71,25 +71,59 @@ fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
 
 @Composable
 fun OwnerItem(owner: OwnerModel, ownerViewModel: OwnerViewModel) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf(owner.name) }
 
-    if (showDialog) {
+    if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Owner") },
             text = { Text("Are you sure you want to delete ${owner.name}?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         ownerViewModel.deleteOwner(owner)
-                        showDialog = false
+                        showDeleteDialog = false
                     }
                 ) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showUpdateDialog) {
+        AlertDialog(
+            onDismissRequest = { showUpdateDialog = false },
+            title = { Text("Update Owner Name") },
+            text = {
+                Column {
+                    TextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Owner Name") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        ownerViewModel.updateOwnerName(owner.id, newName)
+                        showUpdateDialog = false
+                    }
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpdateDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -100,8 +134,11 @@ fun OwnerItem(owner: OwnerModel, ownerViewModel: OwnerViewModel) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable { showDialog = true }
+            .clickable { showDeleteDialog = true }
     ) {
-        Text(text = owner.name)
+        Text(
+            text = owner.name,
+            modifier = Modifier.clickable { showUpdateDialog = true }
+        )
     }
 }
