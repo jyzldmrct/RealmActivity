@@ -85,11 +85,20 @@ class PetViewModel : ViewModel() {
                     _pets.value = _pets.value.toMutableList().apply { add(newPet) }
 
                     if (hasOwner) {
-                        val owner = OwnerModel().apply {
-                            this.name = ownerName
-                            this.petId = newPet.id
+                        val existingOwner: OwnerModel? =
+                            this.query(OwnerModel::class, "name == $0", ownerName).first().find()
+                        if (existingOwner == null) {
+                            val owner = OwnerModel().apply {
+                                this.name = ownerName
+                                this.petId = newPet.id
+                                this.totalPets = 1
+                            }
+                            copyToRealm(owner)
+                        } else {
+                            existingOwner.pets.add(newPet)
+                            existingOwner.totalPets += 1
+                            copyToRealm(existingOwner)
                         }
-                        copyToRealm(owner)
                     }
                     viewModelScope.launch {
                         _showSnackbar.emit("Pet Added: $name")
@@ -160,12 +169,26 @@ class PetViewModel : ViewModel() {
                 val existingPet: PetModel? = query(PetModel::class, "id == $0", pet.id).first().find()
                 if (existingPet != null) {
                     existingPet.ownerName = ownerName
+
+                    val owner: OwnerModel? = query(OwnerModel::class, "name == $0", ownerName).first().find()
+                    if (owner != null) {
+                        owner.totalPets += 1
+                        copyToRealm(owner)
+                    } else {
+                        val newOwner = OwnerModel().apply {
+                            this.id = UUID.randomUUID().toString()
+                            this.name = ownerName
+                            this.totalPets = 1
+                        }
+                        copyToRealm(newOwner)
+                    }
                 }
             }
             loadPets()
             viewModelScope.launch {
-                _showSnackbar.emit("$ownerName adopted ${pet.name} ")
+                _showSnackbar.emit("$ownerName adopted ${pet.name}")
             }
         }
     }
+
 }
