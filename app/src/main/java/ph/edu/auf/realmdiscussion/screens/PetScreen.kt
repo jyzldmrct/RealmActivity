@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -116,10 +117,10 @@ fun PetScreen(petViewModel: PetViewModel = viewModel()) {
                     Text("Add Pet")
                 }
                 LazyColumn {
-                    itemsIndexed(
+                    items(
                         items = filteredPets,
-                        key = { _, item -> item.id }
-                    ) { index: Int, petContent: PetModel ->
+                        key = { it.id }
+                    ) { petContent ->
                         ItemPet(petContent, petViewModel, onRemove = petViewModel::deletePet)
                     }
                 }

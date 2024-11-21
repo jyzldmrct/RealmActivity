@@ -38,7 +38,17 @@ import androidx.compose.ui.unit.dp
 fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
     val owners by ownerViewModel.owners.collectAsState()
 
+    // Calculate the total number of pets
+    val totalPets = owners.sumOf { it.pets.size }
+
     Column(modifier = Modifier.fillMaxSize()) {
+        // Display the total number of pets
+        Text(
+            text = "Total Pets: $totalPets",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+
         Scaffold { paddingValues ->
             LazyColumn(modifier = Modifier.padding(paddingValues)) {
                 itemsIndexed(
