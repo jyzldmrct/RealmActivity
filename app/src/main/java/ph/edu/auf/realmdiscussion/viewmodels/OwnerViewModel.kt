@@ -6,9 +6,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ph.edu.auf.realmdiscussion.database.RealmHelper
 import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
+import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
+
 
 class OwnerViewModel : ViewModel() {
     private val _owners = MutableStateFlow<List<OwnerModel>>(emptyList())
@@ -30,61 +34,72 @@ class OwnerViewModel : ViewModel() {
     }
 
 
-    fun updateOwnerName(ownerId: String, newName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val realm = RealmHelper.getRealmInstance()
-            try {
-                var existingOwner: OwnerModel? = null
-                realm.write {
-                    existingOwner = query(OwnerModel::class, "id == $0", ownerId).first().find()
-
-                    if (existingOwner != null) {
-                        existingOwner!!.name = newName
-                        copyToRealm(existingOwner!!)
-                    }
-                }
-
-                launch(Dispatchers.Main) {
-                    _showSnackbar.emit(
-                        if (existingOwner != null)
-                            "Updated owner name to $newName"
-                        else
-                            "Owner not found"
-                    )
-                }
-
-            } catch (e: Exception) {
-                launch(Dispatchers.Main) {
-                    _showSnackbar.emit("Error updating owner name: ${e.message}")
-                }
-            }
-        }
-    }
-
-   fun deleteOwner(owner: OwnerModel) {
+fun updateOwnerName(ownerId: String, newName: String, petViewModel: PetViewModel) {
     viewModelScope.launch(Dispatchers.IO) {
         val realm = RealmHelper.getRealmInstance()
-        realm.write {
-            val existingOwner: OwnerModel? = query(OwnerModel::class, "id == $0", owner.id).first().find()
-            if (existingOwner != null) {
-                if (existingOwner.pets.isEmpty()) {
-                    delete(existingOwner)
-                    _owners.value = _owners.value.toMutableList().apply { remove(owner) }
-                    viewModelScope.launch {
-                        _showSnackbar.emit("Removed owner ${owner.name}")
+
+        try {
+            // Query for the owner and observe changes
+            val ownerFlow = realm.query(OwnerModel::class, "id == $0", ownerId)
+                .first()
+                .asFlow()
+                .map { it.obj }
+
+            // Collect changes in real-time
+            ownerFlow.collect { owner ->
+                if (owner != null) {
+                    // Update the name
+                    realm.write {
+                        findLatest(owner)?.let { latestOwner ->
+                            latestOwner.name = newName
+
+                            // Update pets with the new owner name
+                            val pets = query(PetModel::class, "ownerName == $0", owner.name).find()
+                            pets.forEach { pet ->
+                                pet.ownerName = newName
+                            }
+                        }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        loadOwners()
+                        petViewModel.loadPets() // Reload pets to reflect the updated owner name
+                        _showSnackbar.emit("Updated owner name to $newName")
                     }
                 } else {
-                    viewModelScope.launch {
-                        _showSnackbar.emit("Cannot delete owner ${owner.name} because they have pets")
+                    withContext(Dispatchers.Main) {
+                        _showSnackbar.emit("Owner not found")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                _showSnackbar.emit("Error updating owner name: ${e.message}")
+            }
+        }
+    }
+}
+
+    fun deleteOwner(owner: OwnerModel) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val realm = RealmHelper.getRealmInstance()
+            realm.write {
+                val existingOwner: OwnerModel? = query(OwnerModel::class, "id == $0", owner.id).first().find()
+                if (existingOwner != null) {
+                    if (existingOwner.totalPets == 0) {
+                        delete(existingOwner)
+                        _owners.value = _owners.value.toMutableList().apply { remove(owner) }
+                        viewModelScope.launch(Dispatchers.Main) {
+                            _showSnackbar.emit("Removed owner ${owner.name}")
+                        }
+                    } else {
+                        viewModelScope.launch(Dispatchers.Main) {
+                            _showSnackbar.emit("Cannot delete owner ${owner.name} because they have pets")
+                        }
                     }
                 }
             }
         }
     }
 
-
-
-
-
-}
 }

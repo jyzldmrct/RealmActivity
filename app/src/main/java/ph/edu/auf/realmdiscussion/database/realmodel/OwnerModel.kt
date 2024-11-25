@@ -10,7 +10,6 @@ class OwnerModel : RealmObject {
     @PrimaryKey
     var id: String = UUID.randomUUID().toString()
     var name: String = ""
-    var petId: String = ""
     var pets: RealmList<PetModel> = realmListOf()
     var totalPets: Int = 0
     var adoptedPetsCount: Int = 0

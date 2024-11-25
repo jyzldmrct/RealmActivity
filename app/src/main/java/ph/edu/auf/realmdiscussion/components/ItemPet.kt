@@ -22,7 +22,6 @@ import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 @Composable
 fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel) -> Unit) {
     key(petModel.id) {
-
         val currentItem by rememberUpdatedState(petModel)
         var newName by remember { mutableStateOf(petModel.name) }
         var newAge by remember { mutableStateOf(petModel.age.toString()) }
@@ -35,7 +34,13 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
             confirmValueChange = {
                 when (it) {
                     SwipeToDismissBoxValue.StartToEnd -> {
-                        onRemove(currentItem)
+                        if (currentItem.ownerName.isEmpty()) {
+                            onRemove(currentItem)
+                            return@rememberSwipeToDismissBoxState true
+                        } else {
+                            petViewModel.showSnackbar("Cannot delete pet with owner")
+                            return@rememberSwipeToDismissBoxState false
+                        }
                     }
 
                     SwipeToDismissBoxValue.EndToStart -> {
@@ -144,12 +149,8 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
             backgroundContent = { DismissBackground(dismissState) },
             content = {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(0.dp, 8.dp),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 5.dp
-                    ),
+                    modifier = Modifier.fillMaxWidth().padding(0.dp, 8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
                     shape = RoundedCornerShape(5.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -159,9 +160,7 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
                         Image(
                             painter = painter,
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(200.dp)
-                                .clip(CircleShape)
+                            modifier = Modifier.size(200.dp).clip(CircleShape)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -195,3 +194,4 @@ fun ItemPet(petModel: PetModel, petViewModel: PetViewModel, onRemove: (PetModel)
         )
     }
 }
+

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ph.edu.auf.realmdiscussion.database.RealmHelper
 import ph.edu.auf.realmdiscussion.database.realmodel.PetModel
 import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
@@ -42,97 +43,164 @@ class PetViewModel : ViewModel() {
         loadPets()
     }
 
-    private fun loadPets() {
+    fun loadPets() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val realm = RealmHelper.getRealmInstance()
+                val results: RealmResults<PetModel> = realm.query(PetModel::class).find()
+
+                withContext(Dispatchers.Main) {
+                    _pets.value = results.toList().also {
+                        if (it.isEmpty()) {
+                            _showSnackbar.emit("No pets found")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    _showSnackbar.emit("Error loading pets: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun showSnackbar(message: String) {
+        viewModelScope.launch {
+            _showSnackbar.emit(message)
+        }
+    }
+
+    fun updateOwnerName(pet: PetModel, newOwnerName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val realm = RealmHelper.getRealmInstance()
-            val results: RealmResults<PetModel> = realm.query(PetModel::class).find()
-            _pets.value = results
+            realm.write {
+                val existingPet: PetModel? = query(PetModel::class, "id == $0", pet.id).first().find()
+                if (existingPet != null) {
+                    existingPet.ownerName = newOwnerName
+                }
+            }
+            loadPets()
         }
     }
 
     fun addPet(name: String, age: Int, hasOwner: Boolean, petType: String, ownerName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val realm = RealmHelper.getRealmInstance()
-            realm.write {
-                val existingPet: PetModel? =
-                    this.query(PetModel::class, "name == $0", name).first().find()
-                if (existingPet == null) {
-                    val newPet = PetModel().apply {
-                        this.id = UUID.randomUUID().toString() // Generate a unique ID
-                        this.name = name
-                        this.age = age
-                        this.petType = petType
-                        this.ownerName = if (hasOwner) ownerName else ""
-                    }
-                    copyToRealm(newPet)
-                    _pets.value = _pets.value.toMutableList().apply { add(newPet) }
 
-                    if (hasOwner) {
-                        val existingOwner: OwnerModel? =
-                            this.query(OwnerModel::class, "name == $0", ownerName).first().find()
-                        if (existingOwner == null) {
-                            val owner = OwnerModel().apply {
-                                this.name = ownerName
-                                this.totalPets = 1
+            try {
+                var success = false
+                var attemptCount = 0
+                val maxAttempts = 3
+
+                while (!success && attemptCount < maxAttempts) {
+                    try {
+                        realm.write {
+                            // Check for existing pet with same name
+                            val existingPet = query(PetModel::class, "name == $0", name)
+                                .first()
+                                .find()
+
+                            if (existingPet == null) {
+                                val newId = UUID.randomUUID().toString()
+
+                                // Verify the ID doesn't exist
+                                val idExists = query(PetModel::class, "id == $0", newId)
+                                    .first()
+                                    .find() != null
+
+                                if (!idExists) {
+                                    // Create new unmanaged pet object
+                                    val newPet = PetModel().apply {
+                                        id = newId
+                                        this.name = name
+                                        this.age = age
+                                        this.petType = petType
+                                        this.ownerName = if (hasOwner) ownerName else ""
+                                    }
+
+                                    // Add the pet to Realm
+                                    val managedPet = copyToRealm(newPet)
+
+                                    // Handle owner creation/update if needed
+                                    if (hasOwner && managedPet != null) {
+                                        val owner = query(OwnerModel::class, "name == $0", ownerName)
+                                            .first()
+                                            .find()
+
+                                        if (owner == null) {
+                                            // Create new owner
+                                            copyToRealm(OwnerModel().apply {
+                                                id = UUID.randomUUID().toString()
+                                                this.name = ownerName
+                                                totalPets = 1
+                                                pets.add(managedPet)
+                                            })
+                                        } else {
+                                            // Update existing owner
+                                            owner.apply {
+                                                totalPets += 1
+                                                pets.add(managedPet)
+                                            }
+                                        }
+                                    }
+
+                                    success = true
+                                    launch(Dispatchers.Main) {
+                                        _showSnackbar.emit("Pet Added: $name")
+                                    }
+                                }
+                            } else {
+                                success = true // Exit the loop if pet name exists
+                                launch(Dispatchers.Main) {
+                                    _showSnackbar.emit("Pet with name $name already exists")
+                                }
                             }
-                            owner.pets.add(newPet)
-                            copyToRealm(owner)
-                        } else {
-                            existingOwner.pets.add(newPet)
-                            existingOwner.totalPets += 1
-                            copyToRealm(existingOwner)
                         }
-                    }
-                    viewModelScope.launch {
-                        _showSnackbar.emit("Pet Added: $name")
-                    }
-                } else {
-                    viewModelScope.launch {
-                        _showSnackbar.emit("Pet with name $name already exists")
+                    } catch (e: IllegalArgumentException) {
+                        attemptCount++
+                        if (attemptCount >= maxAttempts) {
+                            launch(Dispatchers.Main) {
+                                _showSnackbar.emit("Failed to add pet after multiple attempts")
+                            }
+                        }
+                        kotlinx.coroutines.delay(100)
                     }
                 }
+            } catch (e: Exception) {
+                launch(Dispatchers.Main) {
+                    _showSnackbar.emit("Error adding pet: ${e.message}")
+                }
+            } finally {
+                loadPets()
             }
         }
     }
+
+
 
     fun deletePet(model: PetModel) {
         viewModelScope.launch(Dispatchers.IO) {
             val realm = RealmHelper.getRealmInstance()
             realm.write {
-                val pet: PetModel? =
-                    this.query(PetModel::class, "id == $0", model.id).first().find()
+                val pet: PetModel? = this.query(PetModel::class, "id == $0", model.id).first().find()
                 if (pet != null) {
-                    val owner: OwnerModel? =
-                        this.query(OwnerModel::class, "name == $0", pet.ownerName).first().find()
-                    if (owner != null) {
-                        owner.pets.remove(pet)
-                        owner.totalPets -= 1
-                        copyToRealm(owner)
+
+                    if (pet.ownerName.isNotEmpty()) {
+                        viewModelScope.launch {
+                            _showSnackbar.emit("Cannot delete ${model.name} because it has an owner")
+                        }
+                    } else {
+                        delete(pet)
+                        _pets.value = _pets.value.toMutableList().apply { remove(model) }
+                        viewModelScope.launch {
+                            _showSnackbar.emit("Removed ${model.name}")
+                        }
                     }
-                    delete(pet)
-                    _pets.value = _pets.value.toMutableList().apply { remove(model) }
                 }
-            }
-            viewModelScope.launch {
-                _showSnackbar.emit("Removed ${model.name}")
             }
         }
     }
 
-    fun addOwner(pet: PetModel) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val realm = RealmHelper.getRealmInstance()
-            realm.write {
-                val owner = OwnerModel().apply {
-                    this.petId = pet.id
-                }
-                copyToRealm(owner)
-            }
-            viewModelScope.launch {
-                _showSnackbar.emit("Owner added for ${pet.name}")
-            }
-        }
-    }
 
     fun updatePet(pet: PetModel, newName: String, newAge: Int, newPetType: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -173,23 +241,22 @@ class PetViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val realm = RealmHelper.getRealmInstance()
             realm.write {
-                val existingPet: PetModel? =
-                    query(PetModel::class, "id == $0", pet.id).first().find()
+                val existingPet: PetModel? = query(PetModel::class, "id == $0", pet.id).first().find()
                 if (existingPet != null) {
-                    val originalOwner: OwnerModel? =
-                        query(OwnerModel::class, "name == $0", existingPet.ownerName).first().find()
+                    val originalOwner: OwnerModel? = query(OwnerModel::class, "name == $0", existingPet.ownerName).first().find()
                     if (originalOwner != null) {
                         originalOwner.totalPets -= 1
+                        originalOwner.pets.remove(existingPet)
                         copyToRealm(originalOwner)
                     }
 
                     existingPet.ownerName = newOwnerName
 
-                    val newOwner: OwnerModel? =
-                        query(OwnerModel::class, "name == $0", newOwnerName).first().find()
+                    val newOwner: OwnerModel? = query(OwnerModel::class, "name == $0", newOwnerName).first().find()
                     if (newOwner != null) {
                         newOwner.totalPets += 1
                         newOwner.adoptedPetsCount += 1
+                        newOwner.pets.add(existingPet)
                         copyToRealm(newOwner)
                     } else {
                         val newOwnerModel = OwnerModel().apply {
@@ -197,6 +264,7 @@ class PetViewModel : ViewModel() {
                             this.name = newOwnerName
                             this.totalPets = 1
                             this.adoptedPetsCount = 1
+                            this.pets.add(existingPet)
                         }
                         copyToRealm(newOwnerModel)
                     }
@@ -208,7 +276,4 @@ class PetViewModel : ViewModel() {
             }
         }
     }
-
-
-
 }

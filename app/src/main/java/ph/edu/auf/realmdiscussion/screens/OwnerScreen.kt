@@ -28,14 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ph.edu.auf.realmdiscussion.database.realmodel.OwnerModel
 import ph.edu.auf.realmdiscussion.viewmodels.OwnerViewModel
+import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 
 @Composable
-fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
+fun OwnerScreen(
+    ownerViewModel: OwnerViewModel = viewModel(),
+    petViewModel: PetViewModel = viewModel()
+) {
     val owners by ownerViewModel.owners.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -55,7 +58,11 @@ fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
                         shape = RoundedCornerShape(5.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            OwnerItem(owner = ownerContent, ownerViewModel = ownerViewModel)
+                            OwnerItem(
+                                owner = ownerContent,
+                                ownerViewModel = ownerViewModel,
+                                petViewModel = petViewModel
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Owns ${ownerContent.totalPets} pets",
@@ -70,7 +77,11 @@ fun OwnerScreen(ownerViewModel: OwnerViewModel = viewModel()) {
 }
 
 @Composable
-fun OwnerItem(owner: OwnerModel, ownerViewModel: OwnerViewModel) {
+fun OwnerItem(
+    owner: OwnerModel,
+    ownerViewModel: OwnerViewModel,
+    petViewModel: PetViewModel
+) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(owner.name) }
@@ -115,7 +126,7 @@ fun OwnerItem(owner: OwnerModel, ownerViewModel: OwnerViewModel) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        ownerViewModel.updateOwnerName(owner.id, newName)
+                        ownerViewModel.updateOwnerName(owner.id, newName, petViewModel)
                         showUpdateDialog = false
                     }
                 ) {
