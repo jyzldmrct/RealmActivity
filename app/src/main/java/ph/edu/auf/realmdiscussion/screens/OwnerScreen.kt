@@ -32,7 +32,20 @@ import ph.edu.auf.realmdiscussion.viewmodels.PetViewModel
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
+import ph.edu.auf.realmdiscussion.ui.theme.Charleville
+import ph.edu.auf.realmdiscussion.ui.theme.LightGray
+import ph.edu.auf.realmdiscussion.ui.theme.LightOrange
+import ph.edu.auf.realmdiscussion.ui.theme.Namaku
+import ph.edu.auf.realmdiscussion.ui.theme.NavyBlue
+import ph.edu.auf.realmdiscussion.ui.theme.Orange
+import ph.edu.auf.realmdiscussion.ui.theme.SaintPeter
 
 @Composable
 fun OwnerScreen(
@@ -52,10 +65,14 @@ fun OwnerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(0.dp, 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = LightOrange
+                        ),
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = 5.dp
                         ),
-                        shape = RoundedCornerShape(5.dp)
+                        shape = RoundedCornerShape(25.dp)
+
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             OwnerItem(
@@ -66,6 +83,8 @@ fun OwnerScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Owns ${ownerContent.totalPets} pets",
+                                fontFamily = SaintPeter,
+                                fontSize = 16.sp,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -76,6 +95,7 @@ fun OwnerScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OwnerItem(
     owner: OwnerModel,
@@ -89,21 +109,62 @@ fun OwnerItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Owner") },
-            text = { Text("Are you sure you want to delete ${owner.name}?") },
+            title = {
+                Text(
+                    text = "Delete Owner",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontFamily = Namaku,
+                        color = Color.Blue,
+                        fontSize = 24.sp,
+                        textAlign = TextAlign.Center
+                    )
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete ${owner.name}?",
+                    style = TextStyle(
+                        fontFamily = SaintPeter,
+                        fontSize = 16.sp,
+                        color = NavyBlue
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         ownerViewModel.deleteOwner(owner)
                         showDeleteDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Orange
+                    )
                 ) {
-                    Text("Delete")
+                    Text(
+                        text = "Delete",
+                        style = TextStyle(
+                            fontFamily = SaintPeter,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = LightGray
+                    )
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = TextStyle(
+                            fontFamily = SaintPeter,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
                 }
             }
         )
@@ -112,14 +173,34 @@ fun OwnerItem(
     if (showUpdateDialog) {
         AlertDialog(
             onDismissRequest = { showUpdateDialog = false },
-            title = { Text("Update Owner Name") },
+            title = {
+                Text(
+                    text = "Update Owner Name",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontFamily = Namaku,
+                        color = Color.Blue,
+                        fontSize = 24.sp,
+                        textAlign = TextAlign.Center
+                    )
+                )
+            },
             text = {
                 Column {
                     TextField(
                         value = newName,
                         onValueChange = { newName = it },
-                        label = { Text("Owner Name") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                        label = { Text("Owner Name", fontFamily = Charleville) },
+                        textStyle = TextStyle(
+                            fontFamily = SaintPeter,
+                            fontSize = 16.sp,
+                            color = NavyBlue
+                        ),
+                        colors = TextFieldDefaults.textFieldColors(
+                            focusedTextColor = NavyBlue,
+                            containerColor = LightOrange,
+                            focusedIndicatorColor = Orange,
+                            unfocusedIndicatorColor = Color.LightGray
+                        )
                     )
                 }
             },
@@ -128,14 +209,36 @@ fun OwnerItem(
                     onClick = {
                         ownerViewModel.updateOwnerName(owner.id, newName, petViewModel)
                         showUpdateDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = Orange
+                    )
                 ) {
-                    Text("Update")
+                    Text(
+                        text = "Update",
+                        style = TextStyle(
+                            fontFamily = SaintPeter,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUpdateDialog = false }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = { showUpdateDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = LightGray
+                    )
+                ) {
+                    Text(
+                        text = "Cancel",
+                        style = TextStyle(
+                            fontFamily = SaintPeter,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
                 }
             }
         )
@@ -149,7 +252,21 @@ fun OwnerItem(
     ) {
         Text(
             text = owner.name,
-            modifier = Modifier.clickable { showUpdateDialog = true }
+            modifier = Modifier.clickable { showUpdateDialog = true },
+            style = TextStyle(
+                fontFamily = Namaku,
+                fontSize = 24.sp,
+                color = NavyBlue
+            )
         )
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun OwnerScreenPreview() {
+    val sampleOwnerViewModel = OwnerViewModel()
+    val samplePetViewModel = PetViewModel()
+
+    OwnerScreen(ownerViewModel = sampleOwnerViewModel, petViewModel = samplePetViewModel)
 }

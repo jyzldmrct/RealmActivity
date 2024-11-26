@@ -39,6 +39,15 @@ class PetViewModel : ViewModel() {
     private val _showSnackbar = MutableSharedFlow<String>()
     val showSnackbar: SharedFlow<String> = _showSnackbar
 
+    private val _nameError = MutableStateFlow<String?>(null)
+    val nameError: StateFlow<String?> get() = _nameError.asStateFlow()
+
+    private val _ageError = MutableStateFlow<String?>(null)
+    val ageError: StateFlow<String?> get() = _ageError.asStateFlow()
+
+    private val _ownerNameError = MutableStateFlow<String?>(null)
+    val ownerNameError: StateFlow<String?> get() = _ownerNameError.asStateFlow()
+
     init {
         loadPets()
     }
@@ -83,98 +92,135 @@ class PetViewModel : ViewModel() {
         }
     }
 
-    fun addPet(name: String, age: Int, hasOwner: Boolean, petType: String, ownerName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val realm = RealmHelper.getRealmInstance()
+fun addPet(name: String, age: String, hasOwner: Boolean, petType: String, ownerName: String) {
+    viewModelScope.launch(Dispatchers.IO) {
+        val realm = RealmHelper.getRealmInstance()
 
-            try {
-                var success = false
-                var attemptCount = 0
-                val maxAttempts = 3
+        try {
+            // Reset error messages
+            withContext(Dispatchers.Main) {
+                _nameError.value = null
+                _ageError.value = null
+                _ownerNameError.value = null
+            }
 
-                while (!success && attemptCount < maxAttempts) {
-                    try {
-                        realm.write {
-                            // Check for existing pet with same name
-                            val existingPet = query(PetModel::class, "name == $0", name)
+            // Validation checks
+            if (name.isBlank()) {
+                withContext(Dispatchers.Main) {
+                    _nameError.value = "Pet name cannot be empty"
+                }
+                return@launch
+            }
+
+            if (name.any { it.isDigit() }) {
+                withContext(Dispatchers.Main) {
+                    _nameError.value = "Pet name cannot contain numbers"
+                }
+                return@launch
+            }
+
+            val ageInt = age.toIntOrNull()
+            if (ageInt == null || ageInt <= 0) {
+                withContext(Dispatchers.Main) {
+                    _ageError.value = "Pet age must be a positive number"
+                }
+                return@launch
+            }
+
+            if (hasOwner && ownerName.isBlank()) {
+                withContext(Dispatchers.Main) {
+                    _ownerNameError.value = "Owner name cannot be empty if the pet has an owner"
+                }
+                return@launch
+            }
+
+            var success = false
+            var attemptCount = 0
+            val maxAttempts = 3
+
+            while (!success && attemptCount < maxAttempts) {
+                try {
+                    realm.write {
+                        // Check for existing pet with same name
+                        val existingPet = query(PetModel::class, "name == $0", name)
+                            .first()
+                            .find()
+
+                        if (existingPet == null) {
+                            val newId = UUID.randomUUID().toString()
+
+                            // Verify the ID doesn't exist
+                            val idExists = query(PetModel::class, "id == $0", newId)
                                 .first()
-                                .find()
+                                .find() != null
 
-                            if (existingPet == null) {
-                                val newId = UUID.randomUUID().toString()
+                            if (!idExists) {
+                                // Create new unmanaged pet object
+                                val newPet = PetModel().apply {
+                                    id = newId
+                                    this.name = name
+                                    this.age = ageInt
+                                    this.petType = petType
+                                    this.ownerName = if (hasOwner) ownerName else ""
+                                }
 
-                                // Verify the ID doesn't exist
-                                val idExists = query(PetModel::class, "id == $0", newId)
-                                    .first()
-                                    .find() != null
+                                // Add the pet to Realm
+                                val managedPet = copyToRealm(newPet)
 
-                                if (!idExists) {
-                                    // Create new unmanaged pet object
-                                    val newPet = PetModel().apply {
-                                        id = newId
-                                        this.name = name
-                                        this.age = age
-                                        this.petType = petType
-                                        this.ownerName = if (hasOwner) ownerName else ""
-                                    }
+                                // Handle owner creation/update if needed
+                                if (hasOwner && managedPet != null) {
+                                    val owner = query(OwnerModel::class, "name == $0", ownerName)
+                                        .first()
+                                        .find()
 
-                                    // Add the pet to Realm
-                                    val managedPet = copyToRealm(newPet)
-
-                                    // Handle owner creation/update if needed
-                                    if (hasOwner && managedPet != null) {
-                                        val owner = query(OwnerModel::class, "name == $0", ownerName)
-                                            .first()
-                                            .find()
-
-                                        if (owner == null) {
-                                            // Create new owner
-                                            copyToRealm(OwnerModel().apply {
-                                                id = UUID.randomUUID().toString()
-                                                this.name = ownerName
-                                                totalPets = 1
-                                                pets.add(managedPet)
-                                            })
-                                        } else {
-                                            // Update existing owner
-                                            owner.apply {
-                                                totalPets += 1
-                                                pets.add(managedPet)
-                                            }
+                                    if (owner == null) {
+                                        // Create new owner
+                                        copyToRealm(OwnerModel().apply {
+                                            id = UUID.randomUUID().toString()
+                                            this.name = ownerName
+                                            totalPets = 1
+                                            pets.add(managedPet)
+                                        })
+                                    } else {
+                                        // Update existing owner
+                                        owner.apply {
+                                            totalPets += 1
+                                            pets.add(managedPet)
                                         }
                                     }
+                                }
 
-                                    success = true
-                                    launch(Dispatchers.Main) {
-                                        _showSnackbar.emit("Pet Added: $name")
-                                    }
-                                }
-                            } else {
-                                success = true // Exit the loop if pet name exists
+                                success = true
                                 launch(Dispatchers.Main) {
-                                    _showSnackbar.emit("Pet with name $name already exists")
+                                    _showSnackbar.emit("Pet Added: $name")
                                 }
                             }
-                        }
-                    } catch (e: IllegalArgumentException) {
-                        attemptCount++
-                        if (attemptCount >= maxAttempts) {
+                        } else {
+                            success = true // Exit the loop if pet name exists
                             launch(Dispatchers.Main) {
-                                _showSnackbar.emit("Failed to add pet after multiple attempts")
+                                _showSnackbar.emit("Pet with name $name already exists")
                             }
                         }
-                        kotlinx.coroutines.delay(100)
                     }
+                } catch (e: IllegalArgumentException) {
+                    attemptCount++
+                    if (attemptCount >= maxAttempts) {
+                        launch(Dispatchers.Main) {
+                            _showSnackbar.emit("Failed to add pet after multiple attempts")
+                        }
+                    }
+                    kotlinx.coroutines.delay(100)
                 }
-            } catch (e: Exception) {
-                launch(Dispatchers.Main) {
-                    _showSnackbar.emit("Error adding pet: ${e.message}")
-                }
-            } finally {
-                loadPets()
             }
+        } catch (e: Exception) {
+            launch(Dispatchers.Main) {
+                _showSnackbar.emit("Error adding pet: ${e.message}")
+            }
+        } finally {
+            loadPets()
         }
     }
+}
 
 
 

@@ -33,7 +33,6 @@ class OwnerViewModel : ViewModel() {
         }
     }
 
-
 fun updateOwnerName(ownerId: String, newName: String, petViewModel: PetViewModel) {
     viewModelScope.launch(Dispatchers.IO) {
         val realm = RealmHelper.getRealmInstance()
@@ -48,15 +47,16 @@ fun updateOwnerName(ownerId: String, newName: String, petViewModel: PetViewModel
             // Collect changes in real-time
             ownerFlow.collect { owner ->
                 if (owner != null) {
+                    val oldName = owner.name
                     // Update the name
                     realm.write {
                         findLatest(owner)?.let { latestOwner ->
                             latestOwner.name = newName
 
                             // Update pets with the new owner name
-                            val pets = query(PetModel::class, "ownerName == $0", owner.name).find()
+                            val pets = query(PetModel::class, "ownerName == $0", oldName).find()
                             pets.forEach { pet ->
-                                pet.ownerName = newName
+                                findLatest(pet)?.ownerName = newName
                             }
                         }
                     }
